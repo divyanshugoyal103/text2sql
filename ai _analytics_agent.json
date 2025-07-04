@@ -1,0 +1,101 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "path": "ai-agent",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "WebhookTrigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "return [{\n  prompt: $json[\"query\"] || \"What were total sales by region in Q2?\"\n}];"
+      },
+      "id": "Set Prompt",
+      "name": "Set Prompt",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [400, 300]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4",
+        "prompt": "You are a data analyst. Convert this question to an SQL query for PostgreSQL:\n\n{{$json[\"prompt\"]}}\n\nOnly return SQL.",
+        "temperature": 0.2
+      },
+      "id": "Generate SQL",
+      "name": "OpenAI - Generate SQL",
+      "type": "n8n-nodes-base.openai",
+      "typeVersion": 1,
+      "position": [600, 300],
+      "credentials": {
+        "openAiApi": {
+          "id": "your-openai-credential-id",
+          "name": "OpenAI API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "query": "{{$json[\"text\"]}}"
+      },
+      "id": "Run SQL",
+      "name": "Run SQL Query",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 1,
+      "position": [800, 300],
+      "credentials": {
+        "postgres": {
+          "id": "your-postgres-credential-id",
+          "name": "Postgres DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "return [{\n  message: `Query Results: ${JSON.stringify(items[0].json)}`\n}];"
+      },
+      "id": "Format Output",
+      "name": "Format Output",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1000, 300]
+    },
+    {
+      "parameters": {
+        "responseData": "={{$json[\"message\"]}}"
+      },
+      "id": "Send Back",
+      "name": "Send to Frontend",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1200, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [["Set Prompt"]]
+    },
+    "Set Prompt": {
+      "main": [["OpenAI - Generate SQL"]]
+    },
+    "OpenAI - Generate SQL": {
+      "main": [["Run SQL Query"]]
+    },
+    "Run SQL Query": {
+      "main": [["Format Output"]]
+    },
+    "Format Output": {
+      "main": [["Send to Frontend"]]
+    }
+  },
+  "name": "AI Data Agent",
+  "active": false,
+  "settings": {},
+  "tags": []
+}
